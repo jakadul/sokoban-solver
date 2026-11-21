@@ -1,3 +1,4 @@
+// make.fun sokoban-solver entry: push-optimal per room, exact P*
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const DX = [0, 0, -1, 1];
