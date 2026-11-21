@@ -1,19 +1,8 @@
-// Sokoban solver: push-optimal per room, then walk between rooms.
-//
-// Every level this bounty generates is a one-square hallway with the player on it
-// and one to four rooms off it, and a box pushed through a door can never come
-// back — so boxes never leave their room and the level's push-optimal count is the
-// sum of its rooms' optima. Each room is at most 6x6 with 3 or 4 boxes, which makes
-// a breadth-first search over push states (cost 1 per push, player position reduced
-// to the region it can reach) small enough to run exactly. That gives P* pushes,
-// which the checker scores 1000.
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-
 const DX = [0, 0, -1, 1];
 const DY = [-1, 1, 0, 0];
 const CH = ['u', 'd', 'l', 'r'];
-
 function solve(text: string): string {
   const rows = text.split('\n').filter((r) => r.length > 0);
   const w = Math.max(...rows.map((r) => r.length));
@@ -35,9 +24,7 @@ function solve(text: string): string {
     }
   });
   if (start < 0) return '';
-
   const hallRow = Math.floor(start / w);
-  // rooms: components of floor off the hallway row
   const comp = new Int32Array(n).fill(-1);
   const rooms: number[][] = [];
   for (let i = 0; i < n; i++) {
@@ -63,11 +50,9 @@ function solve(text: string): string {
     }
     rooms.push(cells);
   }
-
   const boxes = new Uint8Array(box);
   const allBoxes: number[] = [];
   for (let i = 0; i < n; i++) if (boxes[i]) allBoxes.push(i);
-
   /** cells reachable from `from` with the given box set blocked */
   const region = (from: number, blocked: Uint8Array): Uint8Array => {
     const seen = new Uint8Array(n);
@@ -90,7 +75,6 @@ function solve(text: string): string {
     }
     return seen;
   };
-
   /** BFS walking path from `from` to `to` avoiding walls and boxes; returns letters */
   const walk = (from: number, to: number, blocked: Uint8Array): string => {
     if (from === to) return '';
@@ -123,15 +107,12 @@ function solve(text: string): string {
     }
     return out.reverse().join('');
   };
-
   let pos = start;
   let moves = '';
-
   for (const cells of rooms) {
     const roomBoxes = cells.filter((c) => boxes[c]);
     const roomGoals = new Set(cells.filter((c) => goal[c]));
     if (roomBoxes.length === 0) continue;
-    // boxes in other rooms are static obstacles for this room's search
     const staticBoxes = new Uint8Array(boxes);
     for (const c of roomBoxes) staticBoxes[c] = 0;
     const blockedFor = (b: number[]): Uint8Array => {
@@ -139,10 +120,6 @@ function solve(text: string): string {
       for (const c of b) m[c] = 1;
       return m;
     };
-
-    // BFS over push states, each node carrying its own move string: the walk to
-    // the push square is computed against that node's own box arrangement, so the
-    // replay can never disagree with what the search believed.
     type Node = { b: number[]; p: number; moves: string };
     const keyOf = (b: number[], reg: Uint8Array): string => {
       let m = 0;
@@ -153,7 +130,6 @@ function solve(text: string): string {
     const seen = new Set<string>([keyOf(startNode.b, region(startNode.p, blockedFor(startNode.b)))]);
     const queue: Node[] = [startNode];
     let goalNode: Node | null = null;
-
     for (let qi = 0; qi < queue.length && qi < 400000 && goalNode === null; qi++) {
       const node = queue[qi];
       if (node.b.every((c) => roomGoals.has(c))) { goalNode = node; break; }
@@ -184,8 +160,6 @@ function solve(text: string): string {
       }
     }
     if (!goalNode) continue;
-
-    // commit this room's moves to the real board
     for (const ch of goalNode.moves) moves += ch;
     for (const c of goalNode.b) { boxes[c] = 1; }
     for (const c of roomBoxes) if (!goalNode.b.includes(c)) boxes[c] = 0;
@@ -193,7 +167,6 @@ function solve(text: string): string {
   }
   return moves;
 }
-
 const I = process.env.MAKEFUN_INPUT_DIR ?? '/input';
 const O = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 for (const id of readdirSync(I).sort()) {
