@@ -1,3 +1,4 @@
+// minified entry
 // make.fun sokoban-solver entry: push-optimal per room, exact P*
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
